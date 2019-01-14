@@ -230,7 +230,7 @@ class Connection:
                 on_open_error_callback=partial(self._on_connection_refused, f),
             )
 
-            await connection.async_connect()
+            await connection.connect()
 
             connection.channel_cleanup_callback = self._channel_cleanup
             connection.channel_cancel_callback = self._on_channel_cancel

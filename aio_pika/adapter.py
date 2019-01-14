@@ -136,40 +136,8 @@ class AsyncioConnection(base_connection.BaseConnection):
                          on_close_callback, self.ioloop,
                          stop_ioloop_on_close=stop_ioloop_on_close)
 
-
-    def connect(self):
-        """No-op implementation to stop pika's Connection.__init__ from calling
-        the blocking implementation of connect()
-
-        Async code should be using and awaiting async_connect instead.
-        """
-
-        pass
-
-    async def async_connect(self):
-        """Copy of pika.connection.Connection.connect() that calls the
-        callbacks in the main loop but runs the actual blocking code in a
-        thread executor.
-        """
-
-        self._set_connection_state(self.CONNECTION_INIT)
-        error = await self._adapter_connect()
-        if not error:
-            return self._on_connected()
-        self.remaining_connection_attempts -= 1
-        LOGGER.warning('Could not connect, %i attempts left',
-                       self.remaining_connection_attempts)
-        if self.remaining_connection_attempts:
-            LOGGER.info('Retrying in %i seconds', self.params.retry_delay)
-            self.add_timeout(self.params.retry_delay, self.async_connect)
-        else:
-            self.callbacks.process(0, self.ON_CONNECTION_ERROR, self, self,
-                                   error)
-            self.remaining_connection_attempts = self.params.connection_attempts
-            self._set_connection_state(self.CONNECTION_CLOSED)
-
     async def _adapter_connect(self):
-        error = await self.loop.run_in_executor(None, super()._adapter_connect)
+        error = await self.loop.run_in_executor(None, self._sync_adapter_connect)
 
         if not error:
             self.ioloop.add_handler(
